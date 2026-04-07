@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PMP Quiz - Meshal Alsaedi</title>
-    
+    <title>PMP Simulator - Meshal Alsaedi</title>
     <style>
         :root {
             --primary: #6366f1;
@@ -13,6 +12,8 @@
             --text: #f8fafc;
             --success: #22c55e;
             --error: #ef4444;
+            --warning: #f59e0b;
+            --border: rgba(255, 255, 255, 0.1);
         }
 
         body {
@@ -26,70 +27,47 @@
             background-image: radial-gradient(circle at top right, #1e293b, #0f172a);
         }
 
-        header { padding: 2rem; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        header { padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(10px); position: sticky; top: 0; z-index: 100; }
         
-        .watermark {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            opacity: 0.3;
-            font-weight: bold;
-            letter-spacing: 2px;
-            z-index: 1000;
-        }
+        .watermark { position: fixed; bottom: 20px; right: 20px; opacity: 0.15; font-weight: bold; letter-spacing: 2px; z-index: 1000; pointer-events: none; }
 
-        .container { max-width: 800px; margin: 2rem auto; padding: 0 1rem; flex-grow: 1; }
+        .main-layout { display: flex; max-width: 1250px; margin: 1.5rem auto; gap: 1.5rem; padding: 0 1rem; flex-grow: 1; width: 100%; box-sizing: border-box;}
 
-        .quiz-card {
-            background: var(--card-bg);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            padding: 2rem;
-            border: 1px solid rgba(255,255,255,0.1);
-            display: none;
-            animation: fadeIn 0.4s ease;
-        }
+        .quiz-section { flex: 3; min-width: 0; }
+        
+        .nav-section { flex: 1; background: var(--card-bg); border-radius: 15px; padding: 1.2rem; border: 1px solid var(--border); height: fit-content; position: sticky; top: 80px; }
 
-        .quiz-card.active { display: block; }
+        .nav-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(32px, 1fr)); gap: 6px; margin-top: 1rem; }
 
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .nav-dot { aspect-ratio: 1; border-radius: 4px; background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: var(--text); font-size: 0.7rem; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s; }
+        .nav-dot.active { border: 2px solid var(--primary); transform: scale(1.1); }
+        .nav-dot.flagged { background: var(--warning); color: black; border-color: var(--warning); }
+        .nav-dot.answered { background: var(--primary); color: white; }
+        /* Exam mode results hidden until finish */
+        .nav-dot.correct { background: var(--success); }
+        .nav-dot.wrong { background: var(--error); }
 
-        .options-grid { display: grid; gap: 1rem; margin-top: 1.5rem; }
+        .timer-box { font-family: monospace; font-size: 1.4rem; color: var(--primary); background: rgba(99, 102, 241, 0.1); padding: 5px 15px; border-radius: 8px; border: 1px solid var(--primary); }
 
-        .option-btn {
-            background: rgba(255,255,255,0.05);
-            border: 1px solid rgba(255,255,255,0.1);
-            padding: 1rem;
-            border-radius: 12px;
-            color: white;
-            text-align: left;
-            cursor: pointer;
-            transition: 0.2s;
-            width: 100%;
-        }
+        .quiz-card { background: var(--card-bg); border-radius: 20px; padding: 2rem; border: 1px solid var(--border); position: relative; }
 
+        .option-btn { background: rgba(255,255,255,0.05); border: 1px solid var(--border); padding: 1rem; border-radius: 10px; color: white; text-align: left; cursor: pointer; transition: 0.2s; width: 100%; margin-bottom: 0.8rem; font-size: 0.95rem; }
         .option-btn:hover:not([disabled]) { border-color: var(--primary); background: rgba(255,255,255,0.1); }
-        .option-btn.correct { background: var(--success) !important; border-color: var(--success); }
-        .option-btn.wrong { background: var(--error) !important; border-color: var(--error); }
+        .option-btn.selected { border-color: var(--primary); background: rgba(99, 102, 241, 0.2); }
+        .option-btn.correct { background: var(--success) !important; }
+        .option-btn.wrong { background: var(--error) !important; }
 
         .controls { margin-top: 2rem; display: flex; justify-content: space-between; align-items: center; }
-        
-        .btn {
-            padding: 0.8rem 2rem;
-            border-radius: 10px;
-            border: none;
-            cursor: pointer;
-            font-weight: 600;
-            background: var(--primary);
-            color: white;
-        }
+        .btn { padding: 0.7rem 1.2rem; border-radius: 8px; border: none; cursor: pointer; font-weight: 600; background: var(--primary); color: white; display: flex; align-items: center; gap: 8px; }
+        .btn-flag { background: transparent; border: 1px solid var(--warning); color: var(--warning); }
+        .btn-flag.active { background: var(--warning); color: black; }
+        .btn:disabled { opacity: 0.3; }
 
-        .btn:disabled { opacity: 0.3; cursor: not-allowed; }
+        .mode-switch { display: flex; gap: 10px; margin-bottom: 1rem; }
+        .mode-btn { padding: 5px 15px; border-radius: 20px; border: 1px solid var(--border); background: transparent; color: var(--text); cursor: pointer; font-size: 0.8rem; }
+        .mode-btn.active { background: var(--primary); border-color: var(--primary); }
 
-        .progress-bar { height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; margin-bottom: 2rem; overflow: hidden; }
-        .progress-fill { height: 100%; background: var(--primary); width: 0%; transition: width 0.3s; }
-        
-        footer { text-align: center; padding: 2rem; color: #64748b; font-size: 0.9rem; }
+        @media (max-width: 900px) { .main-layout { flex-direction: column; } .nav-section { order: 2; } }
     </style>
 </head>
 <body>
@@ -97,101 +75,174 @@
     <div class="watermark">MESHAL ALSAEDI</div>
 
     <header>
-        <h1>PMP Practice Exam</h1>
-        <p>Meshal Alsaedi</p>
+        <div>
+            <h2 style="margin:0; font-size: 1.2rem;">PMP Simulator</h2>
+            <span style="font-size: 0.8rem; opacity: 0.7;">Student: Meshal Alsaedi</span>
+        </div>
+        <div class="timer-box" id="timer">180:00</div>
     </header>
 
-    <div class="container">
-        <div class="progress-bar"><div class="progress-fill" id="progress"></div></div>
-        <div id="quiz-box">
-            <p style="text-align: center;">Loading questions from mcqs.json...</p>
+    <div class="main-layout">
+        <div class="quiz-section">
+            <div class="mode-switch">
+                <button class="mode-btn active" id="mode-study" onclick="setMode('study')">Study Mode (Instant Feedback)</button>
+                <button class="mode-btn" id="mode-exam" onclick="setMode('exam')">Exam Mode (Hide Results)</button>
+            </div>
+
+            <div id="quiz-box">
+                <p style="text-align: center; padding: 50px;">Loading questions from mcqs.json...</p>
+            </div>
+            
+            <div id="results" class="quiz-card" style="text-align: center; display: none;">
+                <h2>Exam Summary</h2>
+                <p id="score-text" style="font-size: 3rem; color: var(--primary); margin: 10px 0;"></p>
+                <button class="btn" style="margin: 20px auto;" onclick="location.reload()">Restart Simulator</button>
+            </div>
         </div>
-        
-        <div id="results" class="quiz-card" style="text-align: center;">
-            <h2>Quiz Finished!</h2>
-            <p id="score-text" style="font-size: 2rem; color: var(--primary);"></p>
-            <button class="btn" onclick="location.reload()">Try Again</button>
+
+        <div class="nav-section" id="nav-container" style="display: none;">
+            <h3 style="margin: 0 0 10px 0; font-size: 1rem;">Navigation</h3>
+            <div class="nav-grid" id="nav-grid"></div>
         </div>
     </div>
-
-    <footer>&copy; 2026 | Meshal Alsaedi</footer>
 
     <script>
         let questions = [];
         let currentIdx = 0;
         let score = 0;
+        let userAnswers = {}; // { index: { choice, isCorrect } }
+        let flagged = {}; // { index: true/false }
+        let mode = 'study'; // 'study' or 'exam'
+        let timeLeft = 180 * 60; // 180 minutes in seconds
 
-        // Fetch the data from your JSON file
         async function loadQuizData() {
             try {
                 const response = await fetch('mcqs.json');
                 const data = await response.json();
                 questions = data.mcqs;
+                userAnswers = new Array(questions.length).fill(null);
+                document.getElementById('nav-container').style.display = 'block';
+                startTimer();
+                initNavGrid();
                 renderQuestion();
-            } catch (error) {
-                document.getElementById('quiz-box').innerHTML = `<p style="color:red">Error loading mcqs.json. Make sure the file is in the same folder and you are using a local server (like Go Live in VS Code).</p>`;
+            } catch (e) {
+                document.getElementById('quiz-box').innerHTML = "Error loading questions. Use 'Go Live'.";
             }
+        }
+
+        function startTimer() {
+            const timerEl = document.getElementById('timer');
+            const interval = setInterval(() => {
+                timeLeft--;
+                const mins = Math.floor(timeLeft / 60);
+                const secs = timeLeft % 60;
+                timerEl.innerText = `${mins}:${secs.toString().padStart(2, '0')}`;
+                if (timeLeft <= 0) {
+                    clearInterval(interval);
+                    showFinalResults();
+                }
+            }, 1000);
+        }
+
+        function setMode(m) {
+            if (Object.values(userAnswers).some(a => a !== null)) {
+                if (!confirm("Changing mode will reset your current answers. Continue?")) return;
+                location.reload();
+            }
+            mode = m;
+            document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(`mode-${m}`).classList.add('active');
+            renderQuestion();
+        }
+
+        function initNavGrid() {
+            const grid = document.getElementById('nav-grid');
+            grid.innerHTML = questions.map((_, i) => `<div class="nav-dot" id="dot-${i}" onclick="jumpTo(${i})">${i + 1}</div>`).join('');
+            updateNavUI();
+        }
+
+        function updateNavUI() {
+            questions.forEach((_, i) => {
+                const dot = document.getElementById(`dot-${i}`);
+                dot.className = 'nav-dot';
+                if (i === currentIdx) dot.classList.add('active');
+                if (flagged[i]) dot.classList.add('flagged');
+                else if (userAnswers[i]) {
+                    if (mode === 'study') {
+                        dot.classList.add(userAnswers[i].isCorrect ? 'correct' : 'wrong');
+                    } else {
+                        dot.classList.add('answered');
+                    }
+                }
+            });
         }
 
         function renderQuestion() {
             const item = questions[currentIdx];
             const box = document.getElementById('quiz-box');
-            
-            const options = Object.entries(item.options).map(([key, val]) => `
-                <button class="option-btn" onclick="checkAnswer(this, '${key}', '${item.correct_answer}')">
-                    <b>${key}:</b> ${val}
-                </button>
-            `).join('');
+            const answered = userAnswers[currentIdx] !== null;
+
+            const options = Object.entries(item.options).map(([key, val]) => {
+                let cls = '';
+                if (answered) {
+                    if (mode === 'study') {
+                        const isCorrect = Array.isArray(item.correct_answer) ? item.correct_answer.includes(key) : key === item.correct_answer;
+                        if (isCorrect) cls = 'correct';
+                        else if (key === userAnswers[currentIdx].choice) cls = 'wrong';
+                    } else {
+                        if (key === userAnswers[currentIdx].choice) cls = 'selected';
+                    }
+                }
+                return `<button class="option-btn ${cls}" onclick="handleAns('${key}')" ${answered && mode === 'study' ? 'disabled' : ''}><b>${key}:</b> ${val}</button>`;
+            }).join('');
 
             box.innerHTML = `
-                <div class="quiz-card active">
-                    <div style="font-size: 0.8rem; color: var(--primary); margin-bottom: 1rem;">
-                        QUESTION ${currentIdx + 1} OF ${questions.length} | PAGE ${item.page}
+                <div class="quiz-card">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:1rem; font-size:0.8rem; color:var(--primary);">
+                        <span>Q${currentIdx+1} OF ${questions.length}</span>
+                        <span>PAGE ${item.page}</span>
                     </div>
-                    <h3>${item.question}</h3>
-                    <div class="options-grid">${options}</div>
+                    <h3 style="margin-bottom:1.5rem; line-height:1.4;">${item.question}</h3>
+                    <div>${options}</div>
                     <div class="controls">
-                        <button class="btn" id="next" onclick="nextQuestion()" disabled>Next Question</button>
+                        <button class="btn btn-flag ${flagged[currentIdx]?'active':''}" onclick="toggleFlag()">🚩 Flag for Review</button>
+                        <div style="display:flex; gap:10px;">
+                            <button class="btn" style="background:#475569" onclick="move(-1)" ${currentIdx===0?'disabled':''}>Prev</button>
+                            <button class="btn" onclick="move(1)">${currentIdx===questions.length-1?'Finish':'Next'}</button>
+                        </div>
                     </div>
                 </div>
             `;
+            updateNavUI();
         }
 
-        function checkAnswer(btn, key, correct) {
-            const btns = document.querySelectorAll('.option-btn');
-            btns.forEach(b => b.disabled = true);
-            
-            // Handle multiple correct answers (if the JSON has an array for correct_answer)
-            const isCorrect = Array.isArray(correct) ? correct.includes(key) : key === correct;
-
-            if (isCorrect) {
-                btn.classList.add('correct');
-                score++;
-            } else {
-                btn.classList.add('wrong');
-                btns.forEach(b => {
-                    const bKey = b.querySelector('b').innerText.replace(':', '');
-                    if (Array.isArray(correct) ? correct.includes(bKey) : bKey === correct) {
-                        b.classList.add('correct');
-                    }
-                });
-            }
-            document.getElementById('next').disabled = false;
+        function handleAns(key) {
+            const item = questions[currentIdx];
+            const isCorrect = Array.isArray(item.correct_answer) ? item.correct_answer.includes(key) : key === item.correct_answer;
+            userAnswers[currentIdx] = { choice: key, isCorrect };
+            renderQuestion();
         }
 
-        function nextQuestion() {
-            currentIdx++;
-            document.getElementById('progress').style.width = (currentIdx / questions.length * 100) + '%';
-            if (currentIdx < questions.length) {
-                renderQuestion();
-            } else {
-                document.getElementById('quiz-box').style.display = 'none';
-                document.getElementById('results').style.display = 'block';
-                document.getElementById('score-text').innerText = `${score} / ${questions.length}`;
-            }
+        function toggleFlag() {
+            flagged[currentIdx] = !flagged[currentIdx];
+            renderQuestion();
         }
 
-        // Start the process
+        function move(dir) {
+            if (dir === 1 && currentIdx === questions.length - 1) showFinalResults();
+            else { currentIdx += dir; renderQuestion(); }
+        }
+
+        function jumpTo(i) { currentIdx = i; renderQuestion(); }
+
+        function showFinalResults() {
+            const finalScore = userAnswers.filter(a => a && a.isCorrect).length;
+            document.getElementById('quiz-box').style.display = 'none';
+            document.getElementById('nav-container').style.display = 'none';
+            document.getElementById('results').style.display = 'block';
+            document.getElementById('score-text').innerText = `${finalScore} / ${questions.length}`;
+        }
+
         loadQuizData();
     </script>
 </body>
